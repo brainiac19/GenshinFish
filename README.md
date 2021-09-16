@@ -8,7 +8,7 @@ We are lazy shit
 ## Run main.py as admin, start fishing. 
 ## Cast the rod manually, and it'll detect any status change and control the tension when the time comes. 
 ## Press P to exit, press K to stop current controlling session in case it might not realize that the fish is already caught( it usually would ) 
-## Don't move or scale game window after this is running.
+## Don't move or scale the game window when this is running.
 
 # Extra information
 It's purely based on image recognition, nothing RAM related. Should be safe if you ask me.
