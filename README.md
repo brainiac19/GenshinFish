@@ -1,0 +1,2 @@
+# GenshinFish
+ Auto control fishing
