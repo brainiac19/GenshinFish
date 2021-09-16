@@ -238,11 +238,11 @@ class Clicker:
                                                         cv2.cvtColor(self.image_ops.cancel_hook, cv2.COLOR_BGR2GRAY), None,
                                                         0.8)
                 if result is None or result[1] < self.image_ops.cancel_hook_threshold:
+                    time.sleep(0.2)
                     continue
                 else:
                     coords_to_game_screen = self.image_ops.bigger_area_coords(start, result[0])
                     core_icon_rect = self.image_ops.expand_rect((*coords_to_game_screen,*self.image_ops.cancel_hook.shape[:2][::-1]),50,50)
-                    print(core_icon_rect)
                     print("rod casted!")
                     break
 
