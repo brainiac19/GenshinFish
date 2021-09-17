@@ -15,4 +15,4 @@ We are lazy shit
 ## Well it does call some win32api, don't use it if you consider that sus.
 ## Not tested on anything other than just one 1k 16:9 monitor. I'm lazy.
 ## And of course you can make it more automated. I'm just too lazy to do it.
-## it doesn't take too beefy of a PC to run, but if you can't stay at 60 FPS while running this, consider change the wait time value in Clicker class __init__. And if it's still laggy, or losing control in a fishing battle, then prob better just fish it yourself.
+## it doesn't take too beefy of a PC to run, but if you can't stay at 60 FPS while running this, consider changing the wait time value in Clicker class __init__. And if it's still laggy, or losing control in a fishing battle, then prob better just fish it yourself.
