@@ -5,6 +5,7 @@
 We are lazy shit
 
 # How to use it?
+## If you do not play in English, go to the top of the script and change the game window title to your language.
 ## Run main.py as admin, start fishing. 
 ## Cast the rod manually, and it'll detect any status change and control the tension when the time comes. 
 ## Press K to stop current controlling session in case it might not realize that the fish is already caught( it usually would ) 
