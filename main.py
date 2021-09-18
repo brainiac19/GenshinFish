@@ -1,7 +1,8 @@
 import copy
 import operator
 import winreg
-from time import sleep
+from time import sleep, time
+from os import mkdir
 import json
 import mss
 import cv2
@@ -30,6 +31,7 @@ class ImageOperations:
         self.config = config
         self.mss_instance = mss.mss()
         self.screenWH = (win32api.GetSystemMetrics(0),win32api.GetSystemMetrics(1))
+        self.gameWindowRes = self.get_game_resolution()
         self.templates_source_res = self.config['templates_source_resolution']
         self.gameWindowRect = self.get_game_windowRect()
 
@@ -45,6 +47,8 @@ class ImageOperations:
         self.arrow_right_template, self.cursor_template = \
         self.fit_template_size(self.cast_template, self.pull_template, self.hook_template, self.progress_bar_template,
                                self.arrow_left_template, self.arrow_right_template, self.cursor_template)
+
+
 
 
     def get_progress_indicator_bw(self, img):
@@ -86,18 +90,26 @@ class ImageOperations:
         From the upper left corner of the title bar, to the lower right corner of the game window
         :return:
         '''
-        gameWindowRes = self.get_game_resolution()
-        if operator.eq(gameWindowRes, self.screenWH):
-            return (0,0,*gameWindowRes)
-        gameWindowRect = self.locate_game_window()
-        #return (*gameWindowRect[:2], *gameWindowRes)
 
-        return (gameWindowRect[0] + self.config['window_margin'], gameWindowRect[1], gameWindowRes[0], gameWindowRes[1] + self.config['window_margin'] + self.config['window_caption_height']) #problematic
+        if operator.eq(self.gameWindowRes, self.screenWH):
+            return (0,0,*self.gameWindowRes)
+        else:
+            gameWindowRect = self.locate_game_window()
+            return (gameWindowRect[0] + self.config['window_margin'], gameWindowRect[1],
+                    self.gameWindowRes[0],
+                    self.gameWindowRes[1] + self.config['window_margin'] + self.config['window_caption_height'])
 
     def get_game_screen(self):
-        capture_rect = {"top": self.gameWindowRect[1]+self.config['window_margin'] + self.config['window_caption_height'], "left": self.gameWindowRect[0],
-                        "width": self.gameWindowRect[2],
-                        "height": self.gameWindowRect[3]-(self.config['window_margin'] + self.config['window_caption_height'])}
+        if operator.eq(self.gameWindowRes, self.screenWH):
+            capture_rect = {
+                "top": self.gameWindowRect[1],
+                "left": self.gameWindowRect[0],
+                "width": self.gameWindowRect[2],
+                "height": self.gameWindowRect[3]}
+        else:
+            capture_rect = {"top": self.gameWindowRect[1]+self.config['window_margin'] + self.config['window_caption_height'], "left": self.gameWindowRect[0],
+                            "width": self.gameWindowRect[2],
+                            "height": self.gameWindowRect[3]-(self.config['window_margin'] + self.config['window_caption_height'])}
         screenshot = self.mss_instance.grab(capture_rect)
         gameScreen = cv2.cvtColor(np.array(screenshot), cv2.COLOR_BGRA2BGR)
         return gameScreen
@@ -156,7 +168,7 @@ class ImageOperations:
         return window_rect
 
     def game_coords_to_screen_coords(self, gameCoords):
-        if self.is_full_screen():
+        if operator.eq(self.gameWindowRes, self.screenWH):
             return gameCoords
         else:
             return (self.gameWindowRect[0]+gameCoords[0]+self.config['window_margin'],self.gameWindowRect[1]+gameCoords[1]+self.config['window_margin'] + self.config['window_caption_height'])
@@ -222,6 +234,15 @@ class ImageOperations:
 class Clicker:
     def __init__(self,config):
         self.config = config
+        self.debug = self.config['debug_mode']
+        self.delta = self.config['output_delta_time']
+        if self.debug:
+            try:
+                mkdir('debug')
+            except FileExistsError:
+                pass
+            self.debug_output1 = False
+            self.debug_output2 = False
 
     def test(self):
         #experimental way of locating progress bar.
@@ -247,14 +268,23 @@ class Clicker:
                 try:
                     self.image_ops = ImageOperations(self.config)
                 except:
+                    if self.debug:
+                        print("failed to init image operations class. it's normal if game is minimized.")
                     sleep(self.config['standby_sleep_time'])
                     continue
                 new_screen = self.image_ops.get_game_screen()
                 cropped_lower_right, start, end = self.image_ops.crop_img_by_percentage(new_screen, -1 / 4, -1 / 5)
                 adjusted_lower_right = self.image_ops.img_to_bw(self.image_ops.adjust_contrast(3, cropped_lower_right), 200)
+                if self.debug and not self.debug_output1:
+                    cv2.imwrite(self.config['debug_output_path']['game_screenshot_path'],new_screen)
+                    print('game screen saved to ' + self.config['debug_output_path']['game_screenshot_path'])
+                    self.debug_output1 = True
 
                 result = self.image_ops.locate_template(adjusted_lower_right, self.image_ops.hook_template)
-                if result is None or result[1] < self.config['templates_match_threshold']['hook_threshold']:
+                if self.debug:
+                    debug_out = (self.image_ops.bigger_area_coords(start, result[0]), result[1])
+                    print('hook icon position and fitness:' + str(debug_out))
+                if result[1] < self.config['templates_match_threshold']['hook_threshold']:
                     sleep(self.config['standby_sleep_time'])
                     continue
                 else:
@@ -269,16 +299,23 @@ class Clicker:
                     print('Interrupted!')
                     break
                 new_screen = self.image_ops.get_game_screen()
-                cropped_core_icon_area = new_screen[coords_to_game_screen[1]:coords_to_game_screen[1] + self.image_ops.hook_template.shape[0], coords_to_game_screen[0]:coords_to_game_screen[0] + self.image_ops.hook_template.shape[1]]
+                cropped_core_icon_area = new_screen[core_icon_rect[1]:core_icon_rect[1] + core_icon_rect[3], core_icon_rect[0]:core_icon_rect[0] + core_icon_rect[2]]
                 adjusted_core_icon_area = self.image_ops.img_to_bw(self.image_ops.adjust_contrast(3, cropped_core_icon_area), 200)
-                changed = self.image_ops.locate_template(adjusted_core_icon_area, self.image_ops.hook_template)[1] < self.config['templates_match_threshold']['hook_threshold']
+                result = self.image_ops.locate_template(adjusted_core_icon_area, self.image_ops.hook_template)
+                changed = result[1] < self.config['templates_match_threshold']['hook_threshold']
+                if self.debug:
+                    debug_out = (self.image_ops.bigger_area_coords(core_icon_rect[:2], result[0]), result[1])
+                    print('hook icon position and fitness:' + str(debug_out))
                 if changed:
                     break
 
             #both cancelling fishing and hooking a fish could trigger change of hook icon
-            cropped_core_icon_area = new_screen[core_icon_rect[1]:core_icon_rect[1] + core_icon_rect[3], core_icon_rect[0]:core_icon_rect[0] + core_icon_rect[2]]
-            adjusted_core_icon_area = self.image_ops.img_to_bw(self.image_ops.adjust_contrast(3, cropped_core_icon_area), 200)
-            cancelled = self.image_ops.locate_template(adjusted_core_icon_area, self.image_ops.cast_template)[1] > self.config['templates_match_threshold']['hook_threshold']
+
+            result = self.image_ops.locate_template(adjusted_core_icon_area, self.image_ops.cast_template)
+            cancelled = result[1] > self.config['templates_match_threshold']['cast_threshold']
+            if self.debug:
+                debug_out = (self.image_ops.bigger_area_coords(core_icon_rect[:2], result[0]), result[1])
+                print('hook icon position and fitness:' + str(debug_out))
             if cancelled:
                 print('Cancelled')
                 continue
@@ -306,6 +343,8 @@ class Clicker:
 
             print("Controlling...")
             while(True):
+                if self.delta:
+                    t1 = time()
                 if keyboard.is_pressed('k'):
                     print('Interrupted!')
                     break
@@ -314,6 +353,10 @@ class Clicker:
                 #crop for progress bar area
                 progress_bar_area = new_screen[progress_bar_area_rect[1]:progress_bar_area_rect[1] + progress_bar_area_rect[3], progress_bar_area_rect[0]:progress_bar_area_rect[0] + progress_bar_area_rect[2]]
                 adjusted_progress_bar_area = self.image_ops.get_progress_indicator_bw(progress_bar_area)
+                if self.debug and not self.debug_output2:
+                    cv2.imwrite(self.config['debug_output_path']['polarized_progress_bar_image_path'],adjusted_progress_bar_area)
+                    print('polarized progress bar saved to '+ self.config['debug_output_path']['polarized_progress_bar_image_path'])
+                    self.debug_output2 = True
 
 
                 #try to locate arrow and cursor
@@ -323,6 +366,11 @@ class Clicker:
                     arrow_r = self.image_ops.locate_template(adjusted_progress_bar_area, self.image_ops.arrow_right_template)
                     cursor = self.image_ops.locate_template(adjusted_progress_bar_area, self.image_ops.cursor_template)
 
+                    if self.debug:
+                        print('arrow_l/arrow_r/cursor position and fitness:' +
+                              str((self.image_ops.bigger_area_coords(progress_bar_area_rect[:2], arrow_l[0]), arrow_l[1])) + '\t'
+                              + str((self.image_ops.bigger_area_coords(progress_bar_area_rect[:2], arrow_r[0]), arrow_r[1])) + '\t'
+                              + str((self.image_ops.bigger_area_coords(progress_bar_area_rect[:2], cursor[0]), cursor[1])))
 
 
                     if arrow_l[1] < self.config['templates_match_threshold']['arrow_L_threshold'] or \
@@ -347,6 +395,9 @@ class Clicker:
                     self.click()
                 else:
                     sleep(self.config['update_sleep_time'])
+                if self.delta:
+                    t2 = time()
+                    print('update delta time:' + str(t2-t1))
 
 
 
@@ -367,4 +418,5 @@ if __name__ == '__main__':
         config = json.load(config_file)
     clicker = Clicker(config)
     clicker.fish_loop()
+
 
