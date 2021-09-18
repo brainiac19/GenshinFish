@@ -26,3 +26,4 @@ It doesn't take too beefy of a PC to run, but if you can't stay at 60 FPS while 
 
 ## Update 0.0.2
 Globalization support. No need to configure language now.
+**Substitute templates from the release with the ones in the repo to avoid losing control in some cases**
