@@ -1,0 +1,54 @@
+{
+	"registry_path": "SOFTWARE\\miHoYo\\Genshin Impact",
+    "templates_source_resolution": [1920,1080],
+    "window_caption_height": 31,
+	"window_margin": 2,
+	"update_sleep_time": 0,
+	"standby_sleep_time": 0.5,
+	
+	"color_threshold":
+	{
+		"progress_indicator_bright_yellow": [[160,225,225],[210,255,255]],
+		"progress_bar_bright_green": [[190, 240, 60],[215, 255, 85]],
+		"progress_bar_dark_green": [[75, 100, 35],[105, 130, 60]]
+	},
+	
+	"templates_path":
+	{
+		"cast_path": "templates/cast.png",
+		"hook_path": "templates/hook.png",
+		"pull_path": "templates/pull.png",
+		"progress_bar_path": "templates/progress_bar.png",
+		"arrow_left_path": "templates/arrow_L.png",
+		"arrow_right_path": "templates/arrow_R.png",
+		"cursor_path": "templates/cursor.png"
+	},
+	
+	"templates_match_threshold":
+	{
+		"hook_threshold": 0.8,
+		"cast_threshold": 0.75,
+		"pull_threshold": 0.75,
+		"arrow_L_threshold": 0.4,
+		"arrow_R_threshold": 0.4,
+		"cursor_threshold": 0.4
+	},
+
+    "title_in_languages": 
+	{
+        "en": "Genshin Impact",
+		"ko": "원신",
+		"ja": "原神",
+		"zh-cn": "原神",
+		"zh-tw": "原神",
+		"es": "Genshin Impact",
+		"fr": "Genshin Impact",
+		"ru": "Genshin Impact",
+		"th": "Genshin Impact",
+		"vi": "Genshin Impact",
+		"de": "Genshin Impact",
+		"id": "Genshin Impact",
+		"pt": "Genshin Impact"
+    }
+    
+}

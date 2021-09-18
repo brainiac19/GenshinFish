@@ -1,35 +1,19 @@
 import copy
-import ctypes
 import operator
-import time
 import winreg
 from time import sleep
+import json
 import mss
 import cv2
 import keyboard
 import numpy as np
-import pyautogui
 import win32api
 import win32con
 from PIL import Image
 from PIL import ImageEnhance
 from win32gui import FindWindow, GetWindowRect
 
-windowBarHeight = 33
-windowMargin = 2
-casting_path = 'templates/casting.png'
-hook_path = 'templates/hook.png'
-pulling_path = 'templates/pulling.png'
-progress_bar_path = 'templates/progress_bar.png'
-arrow_left_path = 'templates/Arrow_L.png'
-arrow_right_path = 'templates/Arrow_R.png'
-cursor_path = 'templates/Cursor.png'
-gameWindowName = 'Genshin Impact'
-
 class Utils:
-    @staticmethod
-    def captureScreen():
-        return pyautogui.screenshot()
 
     @staticmethod
     def PIL2CV(img):
@@ -41,43 +25,30 @@ class Utils:
         img = Image.fromarray(cv2.cvtColor(img, cv2.COLOR_BGR2RGB))
         return img
 
-
 class ImageOperations:
-    def __init__(self):
+    def __init__(self,config):
+        self.config = config
         self.mss_instance = mss.mss()
         self.screenWH = (win32api.GetSystemMetrics(0),win32api.GetSystemMetrics(1))
-        self.template_standard_size = (1920,1080)
+        self.templates_source_res = self.config['templates_source_resolution']
         self.gameWindowRect = self.get_game_windowRect()
-        #self.gameWindowRect = (0,0,1920,1080)
-        self.dark_yellow = np.array((160,225,225), dtype=np.uint8)
-        self.bright_yellow = np.array((210,255,255), dtype=np.uint8)
-        self.bright_green_low = np.array((190, 240, 60), dtype=np.uint8)
-        self.bright_green_high = np.array((215, 255, 85), dtype=np.uint8)
-        self.dark_green_low = np.array((75, 100, 35), dtype=np.uint8)
-        self.dark_green_high = np.array((105, 130, 60), dtype=np.uint8)
-        self.dark_orange_low = np.array((50, 200, 240), dtype=np.uint8)
-        self.dark_orange_high = np.array((70, 230, 255), dtype=np.uint8)
+
+        self.cast_template = cv2.cvtColor(cv2.imread(self.config['templates_path']['cast_path']), cv2.COLOR_BGR2GRAY)
+        self.pull_template = cv2.cvtColor(cv2.imread(self.config['templates_path']['pull_path']), cv2.COLOR_BGR2GRAY)
+        self.hook_template = cv2.cvtColor(cv2.imread(self.config['templates_path']['hook_path']), cv2.COLOR_BGR2GRAY)
+        self.progress_bar_template = cv2.imread(self.config['templates_path']['progress_bar_path'])
+        self.arrow_left_template = cv2.cvtColor(cv2.imread(self.config['templates_path']['arrow_left_path']), cv2.COLOR_BGR2GRAY)
+        self.arrow_right_template = cv2.cvtColor(cv2.imread(self.config['templates_path']['arrow_right_path']), cv2.COLOR_BGR2GRAY)
+        self.cursor_template = cv2.cvtColor(cv2.imread(self.config['templates_path']['cursor_path']), cv2.COLOR_BGR2GRAY)
+
+        self.cast_template, self.pull_template, self.hook_template, self.progress_bar_template, self.arrow_left_template,\
+        self.arrow_right_template, self.cursor_template = \
+        self.fit_template_size(self.cast_template, self.pull_template, self.hook_template, self.progress_bar_template,
+                               self.arrow_left_template, self.arrow_right_template, self.cursor_template)
 
 
-        self.casting = cv2.cvtColor(cv2.imread(casting_path),cv2.COLOR_BGR2GRAY)
-        self.pulling = cv2.cvtColor(cv2.imread(pulling_path),cv2.COLOR_BGR2GRAY)
-        self.hook = cv2.cvtColor(cv2.imread(hook_path),cv2.COLOR_BGR2GRAY)
-        self.progress_bar = cv2.imread(progress_bar_path)
-        self.arrow_left = cv2.cvtColor(cv2.imread(arrow_left_path),cv2.COLOR_BGR2GRAY)
-        self.arrow_right = cv2.cvtColor(cv2.imread(arrow_right_path),cv2.COLOR_BGR2GRAY)
-        self.cursor = cv2.cvtColor(cv2.imread(cursor_path),cv2.COLOR_BGR2GRAY)
-
-        self.casting,self.pulling,self.hook,self.progress_bar,self.arrow_left,self.arrow_right,self.cursor = \
-        self.fit_template_size(self.casting,self.pulling,self.hook,self.progress_bar,self.arrow_left,self.arrow_right,self.cursor)
-
-        self.hook_threshold = 0.8
-        self.hook_changed_threshold = 0.5
-        self.casting_threshold = 0.8
-        self.pulling_threshold = 0.75
-
-
-    def get_progress_elements(self,img):
-        bw_image = cv2.inRange(img, self.dark_yellow, self.bright_yellow)
+    def get_progress_indicator_bw(self, img):
+        bw_image = cv2.inRange(img, *np.array(self.config['color_threshold']['progress_indicator_bright_yellow'], dtype=np.uint8))
         return bw_image
 
     def expand_rect(self,rect,x,y):
@@ -120,23 +91,24 @@ class ImageOperations:
             return (0,0,*gameWindowRes)
         gameWindowRect = self.locate_game_window()
         #return (*gameWindowRect[:2], *gameWindowRes)
-        return (gameWindowRect[0] + windowMargin, gameWindowRect[1], gameWindowRes[0], gameWindowRes[1] + windowBarHeight) #problematic
+
+        return (gameWindowRect[0] + self.config['window_margin'], gameWindowRect[1], gameWindowRes[0], gameWindowRes[1] + self.config['window_margin'] + self.config['window_caption_height']) #problematic
 
     def get_game_screen(self):
-        capture_rect = {"top": self.gameWindowRect[1]+windowBarHeight, "left": self.gameWindowRect[0],
+        capture_rect = {"top": self.gameWindowRect[1]+self.config['window_margin'] + self.config['window_caption_height'], "left": self.gameWindowRect[0],
                         "width": self.gameWindowRect[2],
-                        "height": self.gameWindowRect[3]-windowBarHeight}
+                        "height": self.gameWindowRect[3]-(self.config['window_margin'] + self.config['window_caption_height'])}
         screenshot = self.mss_instance.grab(capture_rect)
         gameScreen = cv2.cvtColor(np.array(screenshot), cv2.COLOR_BGRA2BGR)
         return gameScreen
 
     def fit_template_size(self, *templates):
-        if self.gameWindowRect[2]/self.gameWindowRect[3] - self.template_standard_size[0]/self.template_standard_size[1]>0.001:
-            factor = self.gameWindowRect[3]/self.template_standard_size[1]
-        elif self.gameWindowRect[2]/self.gameWindowRect[3] - self.template_standard_size[0]/self.template_standard_size[1]<-0.001:
-            factor = self.gameWindowRect[2] / self.template_standard_size[0]
+        if self.gameWindowRect[2]/self.gameWindowRect[3] - self.templates_source_res[0]/self.templates_source_res[1]>0.001:
+            factor = self.gameWindowRect[3]/self.templates_source_res[1]
+        elif self.gameWindowRect[2]/self.gameWindowRect[3] - self.templates_source_res[0]/self.templates_source_res[1]<-0.001:
+            factor = self.gameWindowRect[2] / self.templates_source_res[0]
         else:
-            factor = self.gameWindowRect[3] / self.template_standard_size[1]
+            factor = self.gameWindowRect[3] / self.templates_source_res[1]
 
         self.scaleFactor = factor
 
@@ -149,7 +121,7 @@ class ImageOperations:
         return cache
 
     def get_game_resolution(self):
-        key = winreg.OpenKey(winreg.HKEY_CURRENT_USER, r"SOFTWARE\miHoYo\Genshin Impact")
+        key = winreg.OpenKey(winreg.HKEY_CURRENT_USER, self.config['registry_path'])
         gameWH = {}
         for i in range(winreg.QueryInfoKey(key)[1]):
             if len(gameWH.keys()) == 2:
@@ -162,8 +134,22 @@ class ImageOperations:
 
         return (gameWH['width'],gameWH['height'])
 
+    def get_game_window_title(self):
+        key = winreg.OpenKey(winreg.HKEY_CURRENT_USER, self.config['registry_path'])
+        for i in range(winreg.QueryInfoKey(key)[1]):
+            value_name, value, datatype = winreg.EnumValue(key, i)
+            if 'CURRENT_LANGUAGE' in value_name:
+                language = value.decode('utf-8').rstrip('\x00')
+                break
+        try:
+            window_title = self.config['title_in_languages'][language]
+            return window_title
+        except:
+            raise KeyError("Language not found!")
+
+
     def locate_game_window(self):
-        window_handle = FindWindow(None, gameWindowName)
+        window_handle = FindWindow(None, self.get_game_window_title())
         window_rect = GetWindowRect(window_handle)
         if any(value < 0 for value in window_rect):
             raise Exception('failed to find game window!')
@@ -173,7 +159,7 @@ class ImageOperations:
         if self.is_full_screen():
             return gameCoords
         else:
-            return (self.gameWindowRect[0]+gameCoords[0]+windowMargin,self.gameWindowRect[1]+gameCoords[1]+windowBarHeight)
+            return (self.gameWindowRect[0]+gameCoords[0]+self.config['window_margin'],self.gameWindowRect[1]+gameCoords[1]+self.config['window_margin'] + self.config['window_caption_height'])
 
     def bigger_area_coords(self,smaller_area_anchor_to_bigger_area,smaller_area_coords):
         return (smaller_area_anchor_to_bigger_area[0] + smaller_area_coords[0], smaller_area_anchor_to_bigger_area[1] + smaller_area_coords[1])
@@ -234,10 +220,8 @@ class ImageOperations:
         return (best_position[1],best_position[0]),best_fit[0]
 
 class Clicker:
-    def __init__(self):
-
-        self.capture_screen_wait_time = 0 #adjust this if screen recognition is affecting performance badly. KEEP IT BELOW 0.2
-        self.main()
+    def __init__(self,config):
+        self.config = config
 
     def test(self):
         #experimental way of locating progress bar.
@@ -254,28 +238,28 @@ class Clicker:
         pass
 
 
-    def main(self):
+    def fish_loop(self):
         print('Ready!')
         while(True):
 
             #wait for game window, then wait for casting rod, locate hook icon
             while(True):
                 try:
-                    self.image_ops = ImageOperations()
+                    self.image_ops = ImageOperations(self.config)
                 except:
-                    sleep(0.5)
+                    sleep(self.config['standby_sleep_time'])
                     continue
                 new_screen = self.image_ops.get_game_screen()
                 cropped_lower_right, start, end = self.image_ops.crop_img_by_percentage(new_screen, -1 / 4, -1 / 5)
                 adjusted_lower_right = self.image_ops.img_to_bw(self.image_ops.adjust_contrast(3, cropped_lower_right), 200)
 
-                result = self.image_ops.locate_template(adjusted_lower_right,self.image_ops.hook)
-                if result is None or result[1] < self.image_ops.hook_threshold:
-                    sleep(0.5)
+                result = self.image_ops.locate_template(adjusted_lower_right, self.image_ops.hook_template)
+                if result is None or result[1] < self.config['templates_match_threshold']['hook_threshold']:
+                    sleep(self.config['standby_sleep_time'])
                     continue
                 else:
                     coords_to_game_screen = self.image_ops.bigger_area_coords(start, result[0])
-                    core_icon_rect = self.image_ops.expand_rect((*coords_to_game_screen,*self.image_ops.hook.shape[:2][::-1]),50,50)
+                    core_icon_rect = self.image_ops.expand_rect((*coords_to_game_screen,*self.image_ops.hook_template.shape[:2][::-1]), 50, 50)
                     print("Rod casted!")
                     break
 
@@ -285,16 +269,16 @@ class Clicker:
                     print('Interrupted!')
                     break
                 new_screen = self.image_ops.get_game_screen()
-                cropped_core_icon_area = new_screen[coords_to_game_screen[1]:coords_to_game_screen[1] + self.image_ops.hook.shape[0], coords_to_game_screen[0]:coords_to_game_screen[0] + self.image_ops.hook.shape[1]]
+                cropped_core_icon_area = new_screen[coords_to_game_screen[1]:coords_to_game_screen[1] + self.image_ops.hook_template.shape[0], coords_to_game_screen[0]:coords_to_game_screen[0] + self.image_ops.hook_template.shape[1]]
                 adjusted_core_icon_area = self.image_ops.img_to_bw(self.image_ops.adjust_contrast(3, cropped_core_icon_area), 200)
-                changed = self.image_ops.locate_template(adjusted_core_icon_area, self.image_ops.hook)[1] < self.image_ops.hook_changed_threshold
+                changed = self.image_ops.locate_template(adjusted_core_icon_area, self.image_ops.hook_template)[1] < self.config['templates_match_threshold']['hook_threshold']
                 if changed:
                     break
 
             #both cancelling fishing and hooking a fish could trigger change of hook icon
             cropped_core_icon_area = new_screen[core_icon_rect[1]:core_icon_rect[1] + core_icon_rect[3], core_icon_rect[0]:core_icon_rect[0] + core_icon_rect[2]]
             adjusted_core_icon_area = self.image_ops.img_to_bw(self.image_ops.adjust_contrast(3, cropped_core_icon_area), 200)
-            cancelled = self.image_ops.locate_template(adjusted_core_icon_area, self.image_ops.casting)[1] > self.image_ops.casting_threshold
+            cancelled = self.image_ops.locate_template(adjusted_core_icon_area, self.image_ops.cast_template)[1] > self.config['templates_match_threshold']['hook_threshold']
             if cancelled:
                 print('Cancelled')
                 continue
@@ -314,9 +298,9 @@ class Clicker:
             crop_rect = (int(dim[0] * 3 / 10), 0, int(dim[0] * 4 / 10), int(dim[0] / 4))
             upper_center_area = new_screen[crop_rect[1]:crop_rect[1] + crop_rect[3], crop_rect[0]:crop_rect[0] + crop_rect[2]]
 
-            located_progress_bar = self.image_ops.locate_template(upper_center_area, self.image_ops.progress_bar)
+            located_progress_bar = self.image_ops.locate_template(upper_center_area, self.image_ops.progress_bar_template)
             progress_bar_pos_to_game = self.image_ops.bigger_area_coords(crop_rect[:2],located_progress_bar[0])
-            progress_bar_area_rect = (*progress_bar_pos_to_game,*self.image_ops.progress_bar.shape[:2][::-1])
+            progress_bar_area_rect = (*progress_bar_pos_to_game,*self.image_ops.progress_bar_template.shape[:2][::-1])
 
 
 
@@ -329,54 +313,58 @@ class Clicker:
                 new_screen = self.image_ops.get_game_screen()
                 #crop for progress bar area
                 progress_bar_area = new_screen[progress_bar_area_rect[1]:progress_bar_area_rect[1] + progress_bar_area_rect[3], progress_bar_area_rect[0]:progress_bar_area_rect[0] + progress_bar_area_rect[2]]
-                adjusted_progress_bar_area = self.image_ops.get_progress_elements(progress_bar_area)
+                adjusted_progress_bar_area = self.image_ops.get_progress_indicator_bw(progress_bar_area)
 
 
                 #try to locate arrow and cursor
                 try:
 
-                    arrow_l = self.image_ops.locate_template(adjusted_progress_bar_area, self.image_ops.arrow_left)
-                    arrow_r = self.image_ops.locate_template(adjusted_progress_bar_area, self.image_ops.arrow_right)
-                    cursor = self.image_ops.locate_template(adjusted_progress_bar_area, self.image_ops.cursor)
+                    arrow_l = self.image_ops.locate_template(adjusted_progress_bar_area, self.image_ops.arrow_left_template)
+                    arrow_r = self.image_ops.locate_template(adjusted_progress_bar_area, self.image_ops.arrow_right_template)
+                    cursor = self.image_ops.locate_template(adjusted_progress_bar_area, self.image_ops.cursor_template)
 
 
-                    if arrow_l[1] < 0.5 or arrow_l[1] < 0.5 or  cursor[1] < 0.5:
-                        raise Exception("Couldn't locate arrows")
 
-                    center_between_arrows_x = (arrow_l[0][0] + arrow_r[0][0]) / 2
-                    if cursor[0][0] < center_between_arrows_x:
-                        self.click()
-                    else:
-                        sleep(self.capture_screen_wait_time)
+                    if arrow_l[1] < self.config['templates_match_threshold']['arrow_L_threshold'] or \
+                            arrow_l[1] < self.config['templates_match_threshold']['arrow_R_threshold'] or  \
+                            cursor[1] < self.config['templates_match_threshold']['cursor_threshold']:
+                        raise Exception("Couldn't locate indicators")
+
 
                 except:
-
                     done_cropped = new_screen[core_icon_rect[1]:core_icon_rect[1] + core_icon_rect[3], core_icon_rect[0]:core_icon_rect[0] + core_icon_rect[2]]
                     adjusted_done = self.image_ops.img_to_bw(self.image_ops.adjust_contrast(3, done_cropped), 200)
-                    finished = self.image_ops.locate_template(adjusted_done, self.image_ops.pulling)[1] < self.image_ops.pulling_threshold
+                    finished = self.image_ops.locate_template(adjusted_done, self.image_ops.pull_template)[1] < self.config['templates_match_threshold']['pull_threshold']
                     if finished:
                         print('Done fishing!')
                         break
                     else:
-                        print("Lost track of progress, retrying!")
+                        print("Lost track of indicators, retrying!")
                         continue
 
+                center_between_arrows_x = (arrow_l[0][0] + arrow_r[0][0]) / 2
+                if cursor[0][0] < center_between_arrows_x:
+                    self.click()
+                else:
+                    sleep(self.config['update_sleep_time'])
 
 
-    def click(self,x=None, y=None):
-        if x is not None and y is not None:
-            x = int(x)
-            y = int(y)
-            ctypes.windll.user32.SetCursorPos(x, y)
-        win32api.mouse_event(win32con.MOUSEEVENTF_LEFTDOWN, *win32api.GetCursorPos(), 0, 0)
-        sleep(self.capture_screen_wait_time)
-        win32api.mouse_event(win32con.MOUSEEVENTF_LEFTUP, *win32api.GetCursorPos(), 0, 0)
+
+    def click(self):
+
+        win32api.mouse_event(win32con.MOUSEEVENTF_LEFTDOWN, 0, 0)
+        sleep(self.config['update_sleep_time'])
+        win32api.mouse_event(win32con.MOUSEEVENTF_LEFTUP, 0, 0)
 
     def mouse_down(self):
-        win32api.mouse_event(win32con.MOUSEEVENTF_LEFTDOWN, *win32api.GetCursorPos(), 0, 0)
+        win32api.mouse_event(win32con.MOUSEEVENTF_LEFTDOWN, 0, 0)
 
     def mouse_up(self):
-        win32api.mouse_event(win32con.MOUSEEVENTF_LEFTUP, *win32api.GetCursorPos(), 0, 0)
+        win32api.mouse_event(win32con.MOUSEEVENTF_LEFTUP,  0, 0)
 
+if __name__ == '__main__':
+    with open('config.json', 'r', encoding='utf-8') as config_file:
+        config = json.load(config_file)
+    clicker = Clicker(config)
+    clicker.fish_loop()
 
-Clicker()
