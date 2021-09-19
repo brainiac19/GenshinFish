@@ -24,6 +24,19 @@ And of course you can make it more automated. I'm just too lazy to do it.
 
 It doesn't take too beefy of a PC to run, but if you can't stay at 60 FPS while running this, consider changing the *update_sleep_time* value in config.json, but keep it under 0.2. And if it's still laggy, or losing control sometimes, then prob better just fish it yourself.
 
-## Update 0.0.2
+
+## Update v0.0.3
+Fixed some unstable occasions.
+
+Better compatibility, with lower spec PC, with high resolution monitors, etc.
+
+Pretty significant performence boost. For my 1k monitor laptop with GTX 1060, refresh rate has increased from 20 fps to 60 fps. Higher the resolution, more obvious the effect. If target tension zone indicator displacement happens a lot, try bringing *lower_resolution_ratio* down, minimum 0.
+
+Added tension indicator visual feedback option.
+
+Added clear console on every update option.
+
+Added some debug options.
+
+## Update v0.0.2
 Globalization support. No need to configure language now.
-**Substitute templates from the release with the ones in the repo to avoid losing control in some cases**

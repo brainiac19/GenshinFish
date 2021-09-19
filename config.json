@@ -1,18 +1,29 @@
 {
+	"update_sleep_time": 0,
+	"standby_sleep_time": 0.3,
+	"wait_for_bite_sleep_time": 0,
+	"wait_for_progress_bar_time":0.75,
+	"lower_resolution_ratio": 1,
+	"wait_for_bite_timeout": 1.2,
 	"debug_mode": false,
-	"output_delta_time": false,
+	"print_delta_time": false,
+	"average_refresh_rate": true,
+	"clear_screen": true,
+	"visualize": true,
 	"registry_path": "SOFTWARE\\miHoYo\\Genshin Impact",
     "templates_source_resolution": [1920,1080],
+	"lowest_resolution_allowed": [800,600],
     "window_caption_height": 31,
-	"window_margin": 2,
-	"update_sleep_time": 0,
-	"standby_sleep_time": 0.5,
+	"window_margin": 1,
+	"progress_bar_expand_relative": [5,5],
+	"core_icon_expand_relative": [50,22],
+	
 	
 	"color_threshold":
 	{
-		"progress_indicator_bright_yellow": [[160,225,225],[210,255,255]],
-		"progress_bar_bright_green": [[190, 240, 60],[215, 255, 85]],
-		"progress_bar_dark_green": [[75, 100, 35],[105, 130, 60]]
+		"progress_indicator_bright_yellow": [[160,225,225],[200,255,255]],
+		"progress_bar_bright_green": [[100, 150, 0],[215, 255, 85]],
+		"progress_bar_dark_green": [[70, 90, 30],[100, 160, 150]]
 	},
 	
 	"templates_path":
@@ -35,7 +46,12 @@
 		"arrow_R_threshold": 0.4,
 		"cursor_threshold": 0.4
 	},
-
+	"arrow_cursor_overlap_threshold":
+	{
+		"arrow_L_overlap": 0.8,
+		"arrow_R_overlap": 0.8,
+		"cursor_clear": 0.8
+	},
     "title_in_languages": 
 	{
         "en": "Genshin Impact",
@@ -56,6 +72,12 @@
 	{
 		"game_screenshot_path": "debug/game_screenshot.png",
 		"polarized_progress_bar_image_path": "debug/polarized_progress_bar.png"
+	},
+	"debug_save_pic_threshold":
+	{
+		"arrow_L_low_threshold": 0.5,
+		"arrow_R_low_threshold": 0.5,
+		"cursor_low_threshold": 0.5
 	}
     
 }
