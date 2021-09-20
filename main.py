@@ -205,6 +205,13 @@ class ImageOperations:
     def parent_area_coords(self, child_area_anchor_to_parent_area, child_area_coords):
         return (child_area_anchor_to_parent_area[0] + child_area_coords[0], child_area_anchor_to_parent_area[1] + child_area_coords[1])
 
+    def low_res_to_high_res_coords(self,low_res_coords, low_res_shape, high_res_shape):
+        factor = self.get_scale_factor_preserve_ratio(self.game_window_res,self.lower_target_resolution)
+        new_coords = (int(low_res_coords[0] / factor),
+                      int(low_res_coords[1] / factor))
+
+        return new_coords
+
     def find_best_threshold(self, res, goalNum):
         currentFitnum = 0.9
         currentPrecision = 0.01
@@ -329,8 +336,8 @@ class Clicker:
             while (True):
                 core_icon_area = self.image_ops.get_game_screen(core_icon_rect)
                 adjusted_icon = self.image_ops.img_to_bw(self.image_ops.adjust_contrast(3, core_icon_area), 200)
-                bit = self.image_ops.locate_template(adjusted_icon, self.image_ops.pull_template_resized_to_game)[
-                           1] > self.config['templates_match_threshold']['pull_threshold']
+                bit = self.image_ops.locate_template(adjusted_icon, self.image_ops.pull_template_resized_to_game)[1] >\
+                      self.config['templates_match_threshold']['pull_threshold']
                 if bit:
                     if self.config['clear_screen']:
                         os.system('cls')
@@ -356,22 +363,31 @@ class Clicker:
             #find progress bar, assuming size can be calculated, x is always centered, y is the same as cursor center
             dim = self.image_ops.game_window_res
             crop_rect = (int(dim[0] * 3 / 10), 0, int(dim[0] * 4 / 10), int(dim[0] / 4))
-
             while(True):
-                upper_center_area = self.image_ops.get_game_screen(crop_rect)#need progress bar coords in original size
+                upper_center_area = self.image_ops.get_low_res_game_screen(crop_rect)#need progress bar coords in original size
                 adjusted_upper_center_area = self.image_ops.get_progress_indicator_bw(upper_center_area)
-                cursor_prefind = self.image_ops.locate_template(adjusted_upper_center_area,self.image_ops.cursor_template_resized_to_game)
+                cursor_prefind = self.image_ops.locate_template(adjusted_upper_center_area,self.image_ops.cursor_template_resized_to_lower)
                 if cursor_prefind[1] < self.config['templates_match_threshold']['cursor_threshold']:
                     if self.config['clear_screen']:
                         os.system('cls')
                     print('Failed to locate progress bar, retrying...')
                     continue
                 else:
+                    original_coords = self.image_ops.low_res_to_high_res_coords(cursor_prefind[0],upper_center_area.shape,crop_rect[2:4][::-1])
                     progress_bar_area_rect = (int((self.image_ops.game_window_res[0] - self.image_ops.progress_bar_template_resized_to_game.shape[1]) / 2),
-                                              int(self.image_ops.anchor_to_center(self.image_ops.cursor_template_resized_to_game,cursor_prefind[0])[1] -
+                                              int(self.image_ops.anchor_to_center(self.image_ops.cursor_template_resized_to_game,original_coords)[1] -
                                               self.image_ops.progress_bar_template_resized_to_game.shape[0] / 2),
-                                              self.image_ops.progress_bar_template_resized_to_game.shape[1] + 1,
-                                              self.image_ops.progress_bar_template_resized_to_game.shape[0] + 1)
+                                              int(self.image_ops.progress_bar_template_resized_to_game.shape[1] +
+                                 self.image_ops.get_scale_factor_preserve_ratio(
+                                     self.config['templates_source_resolution'],
+                                     self.image_ops.lower_target_resolution) * config['progress_bar_expand_relative'][0])
+                                 ,
+                                 int(self.image_ops.progress_bar_template_resized_to_game.shape[0] +
+                                     self.image_ops.get_scale_factor_preserve_ratio(
+                                         self.config['templates_source_resolution'],
+                                         self.image_ops.lower_target_resolution) *
+                                     config['progress_bar_expand_relative'][1])
+                                 )
                     break
 
             #start controlling

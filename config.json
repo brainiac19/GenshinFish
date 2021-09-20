@@ -1,6 +1,6 @@
 {
 	"update_sleep_time": 0,
-	"standby_sleep_time": 0.3,
+	"standby_sleep_time": 0.2,
 	"wait_for_bite_sleep_time": 0,
 	"wait_for_progress_bar_time":0.75,
 	"lower_resolution_ratio": 1,
@@ -15,8 +15,8 @@
 	"lowest_resolution_allowed": [800,600],
     "window_caption_height": 31,
 	"window_margin": 1,
-	"progress_bar_expand_relative": [5,5],
-	"core_icon_expand_relative": [50,22],
+	"progress_bar_expand_relative": [10,10],
+	"core_icon_expand_relative": [50,30],
 	
 	
 	"color_threshold":
@@ -41,7 +41,7 @@
 	{
 		"hook_threshold": 0.8,
 		"cast_threshold": 0.8,
-		"pull_threshold": 0.8,
+		"pull_threshold": 0.7,
 		"arrow_L_threshold": 0.4,
 		"arrow_R_threshold": 0.4,
 		"cursor_threshold": 0.4

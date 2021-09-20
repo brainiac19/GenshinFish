@@ -25,6 +25,12 @@ And of course you can make it more automated. I'm just too lazy to do it.
 It doesn't take too beefy of a PC to run, but if you can't stay at 60 FPS while running this, consider changing the *update_sleep_time* value in config.json, but keep it under 0.2. And if it's still laggy, or losing control sometimes, then prob better just fish it yourself.
 
 
+## Update v0.0.4
+Value adjustment to cope with different lighting conditions. I only tested dark environment with v0.0.3.
+
+New strategy to reduce the time to locate progress bar before the control loop. In my case, 0.23s to 0.08s.
+
+
 ## Update v0.0.3
 Fixed some unstable occasions.
 
