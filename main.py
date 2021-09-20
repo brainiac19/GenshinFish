@@ -270,7 +270,6 @@ class Clicker:
     def __init__(self,config):
         self.config = config
         self.debug = self.config['debug_mode']
-        self.delta = self.config['print_delta_time']
         self.rate = self.config['average_refresh_rate']
         if self.debug:
             try:
@@ -278,8 +277,6 @@ class Clicker:
             except FileExistsError:
                 pass
 
-        if self.rate:
-            self.delta_cache = []
 
     def fish_loop(self):
         print('Ready!')
@@ -390,6 +387,8 @@ class Clicker:
                                  )
                     break
 
+            start_control_time = time()
+            cycle_counter = 0
             #start controlling
             if not self.config['clear_screen']:
                 print("Controlling...")
@@ -397,12 +396,11 @@ class Clicker:
                 if self.config['clear_screen']:
                     os.system('cls')
                 print("Controlling...")
-                if self.delta or self.rate:
-                    t1 = time()
                 if keyboard.is_pressed('k'):
                     print('Interrupted!')
                     break
 
+                cycle_counter +=1
                 progress_bar_area = self.image_ops.get_low_res_game_screen(progress_bar_area_rect)
                 adjusted_progress_bar_area = self.image_ops.get_progress_indicator_bw(progress_bar_area)
 
@@ -451,19 +449,16 @@ class Clicker:
                                 arrow_r[0][0], cursor[0][0])
 
                 center_between_arrows_x = (arrow_l[0][0] + arrow_r[0][0]) / 2
+
                 if cursor[0][0] < center_between_arrows_x:
                     self.click()
                 else:
                     sleep(self.config['update_sleep_time'])
-                if self.delta or self.rate:
-                    t2 = time()
-                    if self.delta:
-                        print('update delta time:' + str(t2-t1))
-                    if self.rate:
-                        self.delta_cache.append(t2-t1)
+
+            finish_control_time = time()
             if self.rate:
                 try:
-                    print('average refresh rate in the last fishing session:' + str(1 / np.mean(self.delta_cache)))
+                    print('average refresh rate in the last fishing session:' + str(cycle_counter / (finish_control_time - start_control_time)))
                 except:
                     print('failed to print average refresh rate')
 
