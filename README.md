@@ -1,5 +1,5 @@
 # GenshinFish
-Auto control fishing. **Specifically optimized for low spec PCs. Manually coded image recognition should make you feel less guilty for using, and is safer from detection. xD**
+Auto control fishing. **Specifically optimized for low spec PCs. Manually coded image recognition should make you feel less guilty for using, and is safer from detection. xD** And if the average refresh rate of a fishing session is lower than 20, then it probably straight won't work, try something written in c. The refresh rate will be printed after a fishing session.
  
 Keep your game resolution above 800x600. WIndowed or fullscreen don't matter. Language doesn't matter.
  
