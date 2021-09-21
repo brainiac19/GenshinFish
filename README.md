@@ -1,5 +1,5 @@
 # GenshinFish
-Auto control fishing. 
+Auto control fishing. **Specifically optimized for low spec PCs. Manually coded image recognition should make you feel less guilty for using, and is safer from detection. xD**
  
 Keep your game resolution above 800x600. WIndowed or fullscreen don't matter. Language doesn't matter.
  
