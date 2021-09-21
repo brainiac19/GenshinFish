@@ -395,7 +395,7 @@ class Clicker:
             while(True):
                 if self.config['clear_screen']:
                     os.system('cls')
-                print("Controlling...")
+                    print("Controlling...")
                 if keyboard.is_pressed('k'):
                     print('Interrupted!')
                     break
