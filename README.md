@@ -1,5 +1,15 @@
 # GenshinFish
- Auto control fishing
+Auto control fishing. 
+ 
+Keep your game resolution above 800x600. WIndowed or fullscreen don't matter. Language doesn't matter.
+ 
+Run main.exe as admin.
+
+It should show *Ready!*
+
+Choose your bait type then cast the rod manually, it'll help with the tension control.
+
+Keep the whole game window visible! The program depends on all sorts of UI elements to do things.
 
 ## Why use it?
 We are lazy shit
@@ -23,6 +33,9 @@ Not tested on anything other than just one 1k 16:9 monitor. I'm lazy.
 And of course you can make it more automated. I'm just too lazy to do it.
 
 It doesn't take too beefy of a PC to run, but if you can't stay at 60 FPS while running this, consider changing the *update_sleep_time* value in config.json, but keep it under 0.2. And if it's still laggy, or losing control sometimes, then prob better just fish it yourself.
+
+## Update v1.0.0
+Basically usable now. 
 
 
 ## Update v0.0.4
